@@ -12,6 +12,7 @@ import matplotlib.colors as xcolors
 # 配置选项
 m_resolution = 120
 matrixes = ('G2_circuit.mtx',)
+core_output_name = '__temp__core_output.txt'
 
 # 基本信息
 script_name = os.path.basename(sys.argv[0])
@@ -21,6 +22,8 @@ script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 current_path = os.getcwd()
 root_path = os.path.realpath(os.sep)
 home_path = os.path.realpath(os.path.expanduser('~'))
+
+core_output_path = f'{script_dir}{os.sep}{core_output_name}'
 
 # 定义colormap
 norm_delta = 0.6 # 控制颜色分布区间，区间为矩阵非零元密度的+-delta
@@ -111,7 +114,7 @@ if __name__ == '__main__':
     build_cmd = f'g++ -std=c++17 -O3 core.cc mmio.c -o core'
     proc_shell(build_cmd, True)
 
-    for mat in matrixes:
+    for mat in mat_list:
         mat_bak = mat
         if not os.path.isabs(mat):
             mat = to_realpath(mat)
@@ -125,15 +128,18 @@ if __name__ == '__main__':
         
         print(f'Process matrix {mat_name}...')
         t0 = time.time()
+        core_cmd = f'{script_dir}{os.sep}core {mat} {core_output_path} {m_resolution}'
+        rc, output = proc_shell(core_cmd)
+        if rc != 0:
+            exit(rc)
 
-        core_cmd = f'{script_dir}{os.sep}core {mat} {m_resolution}'
-        rc, output = proc_shell(core_cmd, True)
         t1 = time.time()
-        print(f'Matrix reading and compression done. Cost: {t1 - t0}s')
-        
-        draw_matrix(output)
+        with open(core_output_name) as f:
+            draw_matrix(f.read())
         xplot.savefig(f'{script_dir}{os.sep}{mat_name}.png', bbox_inches='tight', pad_inches=0)
         xplot.clf()
         t2 = time.time()
-        print(f'Draw image done. Cost: {t2 - t1}s')
+
+        print(f'  Draw matrix cost: {round(t2 - t1, 3)} s')
+        print(f'  Total runtime: {round(t2 - t0, 3)} s')
         print()
