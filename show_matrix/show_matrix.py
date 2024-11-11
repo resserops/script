@@ -50,7 +50,7 @@ def print_baseinfo():
 def proc_shell(cmd, capture=False):
     stdout = subprocess.PIPE if capture else None
     stderr = subprocess.STDOUT if capture else None
-    ret = subprocess.run(cmd, shell=True, stdout=stdout, stderr=stderr, encoding='utf-8')
+    ret = subprocess.run(cmd, shell=True, stdout=stdout, stderr=stderr, encoding='gbk')
     return ret.returncode, ret.stdout
 
 def create_itv_mapping(src, dst):
@@ -59,19 +59,14 @@ def create_itv_mapping(src, dst):
         return dst[0] + (x - src[0]) * a
     return func
 
-def draw_matrix(output):
-    output_sp = output.splitlines()
-    line0 = output_sp[0].split()
-    
-    assert(len(line0) == 5)
-    m, n, m_rate, n_rate, n_resolution = [int(x) for x in line0]
+def draw_matrix_impl(save_name, meta, data):
+    m, n, m_rate, n_rate, n_resolution = meta
 
     mat = numpy.zeros((m_resolution, n_resolution))
     nnz = 0
-    for line in output_sp[1:]:
-        if len(line) == 0:
+    for line_sp in data:
+        if line_sp == None:
             continue
-        line_sp = line.split()
         assert(len(line_sp) == 3)
         x, y, count = [int(x) for x in line_sp]
         mat[x, y] = count / (m_rate * n_rate) # src矩阵非零元密度
@@ -105,6 +100,37 @@ def draw_matrix(output):
     xplot.subplots_adjust(wspace=0, hspace=0)   # 多个图标横纵间距
     xplot.tight_layout(pad=0.1)                 # 图表和figure之间边距
 
+    # 保存图像
+    xplot.savefig(f'{save_name}.png', pad_inches=0)
+    xplot.clf()
+
+def extract_line(line, x):
+    line_sp = line.split()
+    if len(line_sp) != 5:
+        return None
+    return (line_sp[0], line_sp[1], line_sp[x])
+
+def draw_matrix(save_name, output):
+    output_sp = output.splitlines()
+    line0_sp = output_sp[0].split()
+    
+    assert(len(line0_sp) == 6)
+    type = line0_sp[0]
+    meta = [int(x) for x in line0_sp[1:]]
+
+    if type == 'real':
+        data = [extract_line(line, 2) for line in output_sp[1:]]
+        draw_matrix_impl(save_name, meta, data)
+    elif type == 'complex':
+        data = [extract_line(line, 2) for line in output_sp[1:]]
+        draw_matrix_impl(f'{save_name}.real', meta, data)
+        data = [extract_line(line, 3) for line in output_sp[1:]]
+        draw_matrix_impl(f'{save_name}.imag', meta, data)
+        data = [extract_line(line, 4) for line in output_sp[1:]]
+        draw_matrix_impl(save_name, meta, data)
+    else:
+        assert(False)
+
 if __name__ == '__main__':
     print_baseinfo()
 
@@ -127,7 +153,10 @@ if __name__ == '__main__':
     # 构建core程序，加速大量数据处理
     os.chdir(script_dir)
     build_cmd = f'g++ -std=c++17 -O3 core.cc mmio.c -o core'
-    proc_shell(build_cmd, True)
+    rc, output = proc_shell(build_cmd, True)
+    if rc != 0:
+        print(output)
+        exit(1)
 
     for mat in mat_list:
         mat_bak = mat
@@ -150,9 +179,7 @@ if __name__ == '__main__':
 
         t1 = time.time()
         with open(core_output_name) as f:
-            draw_matrix(f.read())
-        xplot.savefig(f'{script_dir}{os.sep}{mat_name}.png', pad_inches=0)
-        xplot.clf()
+            draw_matrix(f'{script_dir}{os.sep}{mat_name}', f.read())
         t2 = time.time()
 
         print(f'  Draw matrix cost: {round(t2 - t1, 3)} s')
