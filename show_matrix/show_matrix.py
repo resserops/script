@@ -77,6 +77,14 @@ def draw_matrix(output):
         mat[x, y] = count / (m_rate * n_rate) # src矩阵非零元密度
         nnz += count
 
+    # 设置图像尺寸
+    fig_height = 5
+    fig_size = [fig_height * n_resolution / m_resolution, fig_height]
+    if opts.colorbar:
+        fig_size[0] *= 1.3
+    xplot.figure(figsize=fig_size)
+
+    # 设置图像数值归一化并绘图
     extent = (0, n_rate * n_resolution, m_rate * m_resolution, 0)
     d = nnz / (m * n) # 整体非零元密度
     d_ln = math.log(d)
@@ -84,11 +92,18 @@ def draw_matrix(output):
     d_max = math.e ** ((1 - norm_delta) * d_ln)
     normalize = xcolors.LogNorm(vmin=d_min, vmax=d_max, clip=False)
     xplot.imshow(mat, cmap=matrix_colormap, extent=extent, norm=normalize)
+    
+    # 设置图像边框、边距
+    ax = xplot.gca()
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.5)
     if opts.colorbar:
-        xplot.colorbar()
-    xplot.xticks([])
-    xplot.yticks([])
-    xplot.subplots_adjust(wspace=0, hspace=0)
+        cbar = xplot.colorbar()
+        cbar.outline.set_linewidth(1.5)
+    xplot.xticks(tuple())   # 取消x轴刻度
+    xplot.yticks(tuple())   # 取消y轴刻度
+    xplot.subplots_adjust(wspace=0, hspace=0)   # 多个图标横纵间距
+    xplot.tight_layout(pad=0.1)                 # 图表和figure之间边距
 
 if __name__ == '__main__':
     print_baseinfo()
@@ -136,7 +151,7 @@ if __name__ == '__main__':
         t1 = time.time()
         with open(core_output_name) as f:
             draw_matrix(f.read())
-        xplot.savefig(f'{script_dir}{os.sep}{mat_name}.png', bbox_inches='tight', pad_inches=0)
+        xplot.savefig(f'{script_dir}{os.sep}{mat_name}.png', pad_inches=0)
         xplot.clf()
         t2 = time.time()
 

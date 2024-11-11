@@ -68,22 +68,14 @@ Mat ReadMat(const char *input_path) {
 }
 
 auto TransMat(const char *output_path, uint32_t dst_m, const Mat &mat) {
-    uint32_t dst_n{(dst_m * mat.n + mat.m - 1) / mat.m};
-    uint32_t m_rate{(mat.m + dst_m - 1) / dst_m};  // 每个dst矩阵i坐标对应m_rate个原矩阵i坐标
-    uint32_t n_rate{(mat.n + dst_n - 1) / dst_n};  // 每个dst矩阵j坐标对应n_rate个原矩阵j坐标
+    uint32_t dst_n{(static_cast<uint64_t>(dst_m) * mat.n + mat.m - 1) / mat.m};
+    uint32_t m_rate{mat.m / dst_m};  // 每个dst矩阵i坐标对应m_rate个原矩阵i坐标
+    uint32_t n_rate{mat.n / dst_n};  // 每个dst矩阵j坐标对应n_rate个原矩阵j坐标
     
     std::unordered_map<uint64_t, size_t> count_map;
     for (uint32_t idx{0}; idx < mat.nnz; ++idx) {
-        uint32_t dst_i{mat.i[idx] / m_rate};
-        uint32_t dst_j{mat.j[idx] / n_rate};
-        if (UNLIKELY(dst_i >= dst_m)) {
-            std::cerr << "dst_i " << dst_i << " out of range (" << dst_m << "). src_i: " << mat.i[idx] << ", idx: " << idx << std::endl;
-            exit(1);
-        }
-        if (UNLIKELY(dst_j >= dst_n)) {
-            std::cerr << "dst_j " << dst_j << " out of range (" << dst_n << "). src_j: " << mat.j[idx] << ", idx: " << idx << std::endl;
-            exit(1);
-        }
+        uint32_t dst_i{std::min(dst_m - 1, mat.i[idx] / m_rate)};
+        uint32_t dst_j{std::min(dst_n - 1, mat.j[idx] / n_rate)};
         uint64_t dst_coor{(static_cast<uint64_t>(dst_i)) << 32 | dst_j};
         ++count_map[dst_coor];
         // 针对对称矩阵，若点(i, j)在dst矩阵对角线，不在src矩阵对角线，计数+1。不在dst矩阵对角线的点压缩后处理
