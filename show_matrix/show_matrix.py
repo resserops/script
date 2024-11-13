@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
 import argparse
 import os
 import sys
@@ -50,7 +52,7 @@ def print_baseinfo():
 def proc_shell(cmd, capture=False):
     stdout = subprocess.PIPE if capture else None
     stderr = subprocess.STDOUT if capture else None
-    ret = subprocess.run(cmd, shell=True, stdout=stdout, stderr=stderr, encoding='gbk')
+    ret = subprocess.run(cmd, shell=True, stdout=stdout, stderr=stderr, encoding='utf-8')
     return ret.returncode, ret.stdout
 
 def create_itv_mapping(src, dst):
@@ -101,6 +103,8 @@ def draw_matrix_impl(save_name, meta, data):
     xplot.tight_layout(pad=0.1)                 # 图表和figure之间边距
 
     # 保存图像
+    if opts.colorbar:
+        save_name += '.cb'
     xplot.savefig(f'{save_name}.png', pad_inches=0)
     xplot.clf()
 
