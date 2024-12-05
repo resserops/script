@@ -76,7 +76,8 @@ Mat ReadMat(const char *input_path) {
     return ret;
 }
 
-auto TransMat(const char *output_path, uint32_t dst_m, const Mat &mat) {
+auto TransMat(const char *output_path, uint32_t exp_dst_m, const Mat &mat) {
+    uint32_t dst_m{std::min(exp_dst_m, mat.m)};
     uint32_t dst_n{(static_cast<uint64_t>(dst_m) * mat.n + mat.m - 1) / mat.m};
     uint32_t m_rate{mat.m / dst_m};  // 每个dst矩阵i坐标对应m_rate个原矩阵i坐标
     uint32_t n_rate{mat.n / dst_n};  // 每个dst矩阵j坐标对应n_rate个原矩阵j坐标
@@ -108,7 +109,7 @@ auto TransMat(const char *output_path, uint32_t dst_m, const Mat &mat) {
 
     std::ofstream ofs(output_path);
     std::string type{mm_is_real(mat.type) ? "real" : "complex"};
-    ofs << type << " " << mat.m << " " << mat.n << " " << m_rate << " " << n_rate << " " << dst_n << " " << std::endl;
+    ofs << type << " " << mat.m << " " << mat.n << " " << m_rate << " " << n_rate << " " << dst_m << " " << dst_n << " " << std::endl;
     for (const auto &[k, v]: count_map) {
         uint32_t dst_i = k >> 32;
         uint32_t dst_j = k;
@@ -132,7 +133,7 @@ int main(int argc, char **argv) {
     }
     const char *input_path{argv[1]};
     const char *output_path{argv[2]};
-    uint32_t dst_m{std::stoul(argv[3])};
+    uint32_t exp_dst_m{std::stoul(argv[3])};
     
     // 矩阵读取和数据处理
     auto t0{std::chrono::system_clock::now()};
@@ -140,7 +141,7 @@ int main(int argc, char **argv) {
     auto t1{std::chrono::system_clock::now()};
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "  Read matrix cost: " << GetDuration(t0, t1) << " s" << std::endl;
-    TransMat(output_path, dst_m, mat);
+    TransMat(output_path, exp_dst_m, mat);
     auto t2{std::chrono::system_clock::now()};
     std::cout << "  Compress matrix cost: " << GetDuration(t1, t2) << " s" << std::endl;
     return 0;
