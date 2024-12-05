@@ -12,7 +12,7 @@ import matplotlib.pyplot as xplot
 import matplotlib.colors as xcolors
 
 # 配置选项
-m_resolution = 120
+exp_m_resolution = 120
 matrixes = ('G2_circuit.mtx',)
 core_output_name = '__temp__core_output.txt'
 
@@ -62,7 +62,7 @@ def create_itv_mapping(src, dst):
     return func
 
 def draw_matrix_impl(save_name, meta, data):
-    m, n, m_rate, n_rate, n_resolution = meta
+    m, n, m_rate, n_rate, m_resolution, n_resolution = meta
 
     mat = numpy.zeros((m_resolution, n_resolution))
     nnz = 0
@@ -118,7 +118,7 @@ def draw_matrix(save_name, output):
     output_sp = output.splitlines()
     line0_sp = output_sp[0].split()
     
-    assert(len(line0_sp) == 6)
+    assert(len(line0_sp) == 7)
     type = line0_sp[0]
     meta = [int(x) for x in line0_sp[1:]]
 
@@ -176,7 +176,7 @@ if __name__ == '__main__':
         
         print(f'Process matrix {mat_name}...')
         t0 = time.time()
-        core_cmd = f'{script_dir}{os.sep}core {mat} {core_output_path} {m_resolution}'
+        core_cmd = f'{script_dir}{os.sep}core {mat} {core_output_path} {exp_m_resolution}'
         rc, output = proc_shell(core_cmd)
         if rc != 0:
             exit(rc)
