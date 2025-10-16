@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+# 脚本仅在交互式环境中生效
+[[ $- == *i* ]] || return
+
 COLOR_YELLOW_BOLD='\e[01;33m'
 COLOR_GREEN_BOLD='\e[01;32m'
 COLOR_RESET='\e[0m'
@@ -21,7 +24,7 @@ function git_branch() {
     git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e "s/* \(.*\)/[\1$(git_dirty)]/"
 }
 
-# $1：颜色编码；$2：字符串，该函数返回未转义的完整PS1字符串
+# 颜色包装函数，$1：颜色编码；$2：字符串
 function color() {
     printf '\[%s\]%s\[%s\]' "$1" "$2" ${COLOR_RESET}
 }
