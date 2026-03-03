@@ -1,5 +1,4 @@
 #! /usr/bin/env bash
-
 # 脚本仅在交互式环境中生效
 [[ $- == *i* ]] || return
 
