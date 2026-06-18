@@ -12,4 +12,4 @@ if [ -f ~/.bashrc.d/ps1.sh ]; then
 fi
 EOF
 
-echo "To apply the changes, run: source ~/.bashrc"
+echo "to apply the changes, run: source ~/.bashrc"
