@@ -6,6 +6,7 @@ import subprocess
 import platform
 import tarfile
 import shutil
+import time
 from pathlib import Path
 
 # 基础信息
@@ -65,15 +66,30 @@ def launch_independent_term(term, num, display=None):
     env["DISPLAY"] = display
 
     # 循环启动指定数量的终端
-    launched_num = 0
-    for _ in range(num):
+    proc_list = []
+    for i in range(num):
         try:
             # stdout/stderr重定向到DEVNULL避免阻塞父进程管道
-            subprocess.Popen([term], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
+            proc = subprocess.Popen([term], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
+            proc_list.append(proc)
         except Exception as e:
-            print(f'error: failed to launch terminal "{term.name}". exception: {e}')
-        else:
+            print(f'error: failed to launch terminal "{term.name}" #{i + 1}. exception: {e}')
+
+    if len(proc_list) == 0:
+        return 0
+    
+    # 等待小段间隔后检测进程是否存活
+    time.sleep(1) 
+    
+    launched_num = 0
+    for i, proc in enumerate(proc_list):
+        return_code = proc.poll()
+        if return_code is None:
+            # 进程还未终止
             launched_num += 1
+        else:
+            print(f'error: terminal "{term.name}" #{i + 1} exited unexpectedly. code: {return_code}')
+
     return launched_num
 
 def main():
