@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import argparse
 import os
 import sys
 import subprocess
 import platform
-import tarfile
 import shutil
 import time
 from pathlib import Path
@@ -12,42 +12,12 @@ from pathlib import Path
 # 基础信息
 script_path = Path(sys.argv[0]).resolve()
 
-def get_architecture():
-    arch = platform.machine().lower()
-    if arch in ("x86_64", "amd64"):
-        return "x86_64"
-    if arch in ("aarch64", "arm64"):
-        return "aarch64"
-    return "unknown"
-
 def get_term_path(term):
     if os.sep not in term:  # 传入的term是命令
         # 本地是否存在该命令
-        def check_local(term):
-            local_term_path = script_path.parent / term
-            if local_term_path.is_file() and os.access(local_term_path, os.X_OK):
-                return local_term_path.resolve()
-            return None
-            
-        arch = get_architecture()
-        if (res := check_local(term)):
-            return res
-        if (res := check_local(f"{term}-{arch}")):
-            return res
-        
-        # 本地是否存在该命令压缩包
-        tar_path = script_path.parent / f"{term}-{arch}.tar.gz"
-        if tar_path.is_file():
-            try:
-                with tarfile.open(tar_path, "r:gz") as tar:
-                    tar.extractall(script_path.parent, filter="data")
-            except Exception as e:
-                print(f'warning: failed to extract local archive "{tar_path.name}". exception: {e}')
-            else:
-                if (res := check_local(term)):
-                    return res
-                if (res := check_local(f"{term}-{arch}")):
-                    return res
+        local_term_path = script_path.parent / term
+        if local_term_path.is_file() and os.access(local_term_path, os.X_OK):
+            return local_term_path.resolve()
         
         # 本地无法找到，检查系统PATH
         which_path = shutil.which(term)
@@ -73,7 +43,7 @@ def launch_independent_term(term, num, display=None):
             proc = subprocess.Popen([term], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
             proc_list.append(proc)
         except Exception as e:
-            print(f'error: failed to launch terminal "{term.name}" #{i + 1}. exception: {e}')
+            print(f'error: failed to launch terminal "{term.name}" #{i + 1}. exception: {e}', file=sys.stderr)
 
     if len(proc_list) == 0:
         return 0
@@ -88,7 +58,7 @@ def launch_independent_term(term, num, display=None):
             # 进程还未终止
             launched_num += 1
         else:
-            print(f'error: terminal "{term.name}" #{i + 1} exited unexpectedly. code: {return_code}')
+            print(f'error: terminal "{term.name}" #{i + 1} exited unexpectedly. code: {return_code}', file=sys.stderr)
 
     return launched_num
 
@@ -99,19 +69,19 @@ def main():
 
     # 解析入参
     parser = argparse.ArgumentParser(description="launch a remote terminal based on DISPLAY")
-    parser.add_argument("--term", "-t", type=str, default="alacritty", help="terminal command or path")
+    parser.add_argument("--term", "-t", type=str, default="xterm", help="terminal command or path")
     parser.add_argument("--num", "-n", type=int, default=1, help="the number of launch terminals")
     parser.add_argument("--display", "-d", default=os.environ.get("DISPLAY"), help="target DISPLAY")
     args = parser.parse_args()
 
     if args.display is None:
-        print(f"error: DISPLAY is none")
+        print(f"error: DISPLAY is none", file=sys.stderr)
         sys.exit(1)
 
     # 查找term
     term = get_term_path(args.term)
     if term is None:
-        print(f"error: term {args.term} not found")
+        print(f'error: term "{args.term}" not found', file=sys.stderr)
         sys.exit(1)
 
     # 弹窗
