@@ -1,9 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+import re
+import builtins
 
-__all__ = ["styled"]
+__all__ = ["stylize", "strip", "print"]
 
-class AnsiStyledStr(str):
+class StyleableStr():
     COLOR_MAP = {
         "black": 0,
         "red": 1,
@@ -112,13 +115,9 @@ class AnsiStyledStr(str):
     def __add__(self, other):
         return self.__str__() + str(other)
 
-    def __iadd__(self, other):
-        self._s += str(other)
-        return self
-
     def __radd__(self, other):
         return str(other) + self.__str__()
-    
+
     def __str__(self):
         codes = list(self._styles)
         if self._fore:
@@ -129,5 +128,33 @@ class AnsiStyledStr(str):
             return self.s
         return f"\033[{';'.join(codes)}m{self.s}\033[0m"
 
-def styled(s):
-    return AnsiStyledStr(s)
+
+def stylize(s):
+    return StyleableStr(s)
+
+
+def _compile_ansi_escape_regex():
+    osc = r"(?:\x1b\][\s\S]*?(?:\x07|\x1b\x5c|\x9c))"
+    csi = r"[\x1b\x9b][\[\]()#;?]*?(?:\d{1,4}(?:[;:]\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]"
+    return re.compile(f"{osc}|{csi}")
+
+
+_ANSI_ESCAPE_REGEX = _compile_ansi_escape_regex()
+
+
+def strip(s : str) -> str:
+    return _ANSI_ESCAPE_REGEX.sub("", s)
+
+
+def print(*args, **kwargs):
+    file = kwargs.get("file") or sys.stdout
+    
+    try:
+        tty = file.isatty()
+    except (AttributeError, TypeError):
+        tty = False
+
+    if not tty:
+        args = tuple(strip(arg if isinstance(arg, str) else str(arg)) for arg in args)
+
+    builtins.print(*args, **kwargs)
