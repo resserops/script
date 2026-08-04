@@ -4,7 +4,6 @@ import argparse
 import os
 import sys
 import subprocess
-import platform
 import shutil
 import time
 from pathlib import Path
@@ -43,7 +42,7 @@ def launch_independent_term(term, num, display=None):
             proc = subprocess.Popen([term], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
             proc_list.append(proc)
         except Exception as e:
-            print(f'error: failed to launch terminal "{term.name}" #{i + 1}. exception: {e}', file=sys.stderr)
+            print(f"error: failed to launch terminal '{term.name}' #{i + 1}. exception: {e}", file=sys.stderr)
 
     if len(proc_list) == 0:
         return 0
@@ -58,7 +57,7 @@ def launch_independent_term(term, num, display=None):
             # 进程还未终止
             launched_num += 1
         else:
-            print(f'error: terminal "{term.name}" #{i + 1} exited unexpectedly. code: {return_code}', file=sys.stderr)
+            print(f"error: terminal '{term.name}' #{i + 1} exited unexpectedly. code: {return_code}", file=sys.stderr)
 
     return launched_num
 
@@ -81,7 +80,7 @@ def main():
     # 查找term
     term = get_term_path(args.term)
     if term is None:
-        print(f'error: term "{args.term}" not found', file=sys.stderr)
+        print(f"error: term '{args.term}' not found", file=sys.stderr)
         sys.exit(1)
 
     # 弹窗
