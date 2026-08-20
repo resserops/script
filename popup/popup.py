@@ -62,9 +62,9 @@ def launch_independent_term(term, num, display=None):
     return launched_num
 
 def main():
-    print(f"script: {script_path.name}")
-    print(f"script path: {script_path}")
-    print(f"current dir: {os.getcwd()}\n")
+    print(f"cmd: {script_path.name} {' '.join(sys.argv[1:])}")
+    print(f"exe: {script_path}")
+    print(f"cwd: {os.getcwd()}\n")
 
     # 解析入参
     parser = argparse.ArgumentParser(description="launch a remote terminal based on DISPLAY")
