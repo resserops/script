@@ -1,0 +1,7 @@
+timestamp: 2026-09-08 19:38:07.431900
+
+gantt results:
+#, begin, duration, <tag1>, <tag2>
+...
+
+此后每行，#打印worker_id，可以是string，表示任务在甘特图的哪个行上；begin表示任务开始时间距离timestamp的时间，浮点型，单位s；duration表示任务长度，浮点型，单位s；后面的tag则是任务的自定义字段，脚本支持输入一个包含tag的格式化字符串，将字符串内容输入到对应任务的甘特图bar上

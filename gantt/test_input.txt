@@ -1,0 +1,16 @@
+timestamp: 2026-09-08 19:38:07.431900
+
+gantt results:
+#, begin, duration, task, size
+main, 0.0, 0.8, init, small
+main, 0.8, 12.5, compute, large
+main, 13.3, 0, sync, small
+main, 13.3, 1.2, cleanup, small
+io-worker, 1.0, 5.5, read, medium
+io-worker, 7.0, 4.0, write, medium
+io-worker, 11.5, 0.02, fsync, small
+gpu, 1.5, 3.25, kernel-A, large
+gpu, 5.0, 6.75, kernel-B, large
+net, 2.0, 2.5, recv, medium
+net, 9.0, 3.0, send, medium
+net, 14.5, 0.001, ping, small
