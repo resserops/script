@@ -54,7 +54,7 @@ def load_config(path):
 
 def ssh(host: Host, command: str, timeout: int) -> Result:
     ssh_cmd = [
-        "ssh", 
+        "ssh",
         "-p", host.port,
         "-o", f"ConnectTimeout={timeout}",
         "-o", "StrictHostKeyChecking=no",
@@ -113,19 +113,20 @@ def main():
             max_prefix_len = max(max_prefix_len, len(prefix))
             entry.append(prefix)
 
-        for i, entry in enumerate(res):
-            host, future, prefix = entry
-
+        for host, future, prefix in res:
             future_res = future.result()
             output = future_res.output.strip()
             if future_res.returncode is None:
                 assert("\n" not in output)
                 output = f"exception: {output}"
+                suffix = "---"
+            else:
+                suffix = future_res.returncode
             
             output_lines = output.splitlines(keepends=True)
             # 处理缩进
-            output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 13)))
-            print(f"[{prefix:<{max_prefix_len}}][ret: {future_res.returncode:>3}] {output}")
+            output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8)))
+            print(f"[{prefix:<{max_prefix_len}}][{suffix:>3}] {output}")
             
 if __name__ == "__main__":
     main()
