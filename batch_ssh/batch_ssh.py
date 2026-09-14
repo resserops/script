@@ -6,9 +6,11 @@ import argparse
 import subprocess
 import configparser
 import textwrap
+
 from pathlib import Path
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 # 基础信息
 script_path = Path(sys.argv[0]).resolve()
@@ -24,7 +26,7 @@ class Host:
 @dataclass(frozen=True)
 class Result:
     output: str
-    returncode: int | None
+    returncode: Optional[int]
 
 def load_config(path):
     if not os.path.exists(path):
@@ -55,6 +57,7 @@ def load_config(path):
 def ssh(host: Host, command: str, timeout: int) -> Result:
     ssh_cmd = [
         "ssh",
+        "-q",
         "-p", host.port,
         "-o", f"ConnectTimeout={timeout}",
         "-o", "StrictHostKeyChecking=no",
@@ -81,8 +84,11 @@ def ssh(host: Host, command: str, timeout: int) -> Result:
             returncode=None
         )
 
+def elide(arg: str) -> str:
+    return "..." if "\n" in arg else arg
+
 def main():
-    print(f"cmd: {script_path.name} {' '.join(sys.argv[1:])}")
+    print(f"cmd: {script_path.name} {' '.join(elide(arg) for arg in sys.argv[1:])}")
     print(f"exe: {script_path}")
     print(f"cwd: {os.getcwd()}\n")
     
@@ -124,8 +130,8 @@ def main():
                 suffix = future_res.returncode
             
             output_lines = output.splitlines(keepends=True)
-            # 处理缩进
             output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8)))
+            # 输出格式：[name (host)][return code] command output
             print(f"[{prefix:<{max_prefix_len}}][{suffix:>3}] {output}")
             
 if __name__ == "__main__":
