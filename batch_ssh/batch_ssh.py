@@ -54,7 +54,7 @@ def load_config(path):
         print(f"error: failed to parse config file. exception: {e}", file=sys.stderr)
         sys.exit(1)
 
-def ssh(host: Host, command: str, timeout: int) -> Result:
+def ssh(host: Host, command: str, timeout: int, shell: Optional[str]) -> Result:
     ssh_cmd = [
         "ssh",
         "-q",
@@ -62,15 +62,22 @@ def ssh(host: Host, command: str, timeout: int) -> Result:
         "-o", f"ConnectTimeout={timeout}",
         "-o", "StrictHostKeyChecking=no",
         "-o", "BatchMode=yes",
-        f"{host.user}@{host.host}" if host.user else f"{host.host}", 
-        command
+        f"{host.user}@{host.host}" if host.user else f"{host.host}"
     ]
+
+    if shell:
+        ssh_cmd += [shell, "-s"]
+        input = command
+    else:
+        ssh_cmd.append(command)
+        input = None
 
     try:
         result = subprocess.run(
-            ssh_cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
+            ssh_cmd,
+            input=input,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             errors="ignore"
         )
@@ -84,8 +91,10 @@ def ssh(host: Host, command: str, timeout: int) -> Result:
             returncode=None
         )
 
+
 def elide(arg: str) -> str:
     return "..." if "\n" in arg else arg
+
 
 def main():
     print(f"cmd: {script_path.name} {' '.join(elide(arg) for arg in sys.argv[1:])}")
@@ -98,6 +107,7 @@ def main():
     parser.add_argument("-c", "--config", default=default_config_path, help=f"path to the config file (default: {default_config_path})")
     parser.add_argument("-j", "--jobs", type=int, default=16, help="number of concurrent jobs (default: 16)")
     parser.add_argument("-t", "--timeout", type=int, default=5, help="ssh timeout in seconds (default: 5)")
+    parser.add_argument("-s", "--shell", help="remote shell to execute the command")
     args = parser.parse_args()
 
     hosts = load_config(args.config)
@@ -109,7 +119,7 @@ def main():
     with ThreadPoolExecutor(max_workers=args.jobs) as executor:
         res = []
         for host in hosts:
-            future = executor.submit(ssh, host, command, args.timeout)
+            future = executor.submit(ssh, host, command, args.timeout, args.shell)
             res.append([host, future])
         
         max_prefix_len = 0
@@ -130,7 +140,10 @@ def main():
                 suffix = future_res.returncode
             
             output_lines = output.splitlines(keepends=True)
-            output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8)))
+            if output_lines:
+                output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8)))
+            else:
+                output = "no output"
             # 输出格式：[name (host)][return code] command output
             print(f"[{prefix:<{max_prefix_len}}][{suffix:>3}] {output}")
             
