@@ -94,7 +94,7 @@ def main():
         elif args.revision and "unknown revision" in stderr:
             print(f"error: revision '{args.revision}' does not exist", file=sys.stderr)
         else:
-            print(f"error: failed to run command '{" ".join(cmd)}'", file=sys.stderr)
+            print(f"error: failed to run command '{' '.join(cmd)}'", file=sys.stderr)
             if stderr:
                 print(textwrap.indent(e.stderr.strip(), "  "), file=sys.stderr)
         sys.exit(1)
