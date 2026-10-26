@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# per-process cpu time snapshots, used by the top cpu-hungry proc stats at the end
+# per-process cpu time snapshots, used by the top cpu-hungry process stats at the end
 cpu_per_proc_0=$(mktemp); cpu_per_proc_1=$(mktemp)
 trap 'rm -f "$cpu_per_proc_0" "$cpu_per_proc_1"' EXIT
 
@@ -8,11 +8,13 @@ stat_re='^([0-9]+) \((.*)\) (.*)$'
 snap_proc_cpu() {
     local p buf cpu_used_0
     for p in /proc/[0-9]*; do
-        read -r buf < "$p/stat" 2>/dev/null || continue
+        read -r buf 2>/dev/null < "$p/stat" || continue
         [[ $buf =~ $stat_re ]] || continue
+
         set -- ${BASH_REMATCH[3]}
         [ $# -ge 13 ] || continue
         cpu_used_0=$(( ${12} + ${13} ))
+
         set -- ${BASH_REMATCH[2]//[[:space:]]/ }
         printf '%s\t%s\t%s\n' "${BASH_REMATCH[1]}" "$cpu_used_0" "$*"
     done > "$1"
