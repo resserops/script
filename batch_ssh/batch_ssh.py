@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
-import sys
 import argparse
-import subprocess
 import configparser
+import os
+import subprocess
+import sys
 import textwrap
-
-from pathlib import Path
-from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 # 基础信息
 script_path = Path(sys.argv[0]).resolve()
+
 
 @dataclass(frozen=True)
 class Host:
@@ -23,10 +23,12 @@ class Host:
     port: str
     password: str
 
+
 @dataclass(frozen=True)
 class Result:
     output: str
     returncode: Optional[int]
+
 
 def load_config(path):
     if not os.path.exists(path):
@@ -46,7 +48,7 @@ def load_config(path):
                 host=config.get(section, "host", fallback=section),
                 user=config.get(section, "user", fallback=""),
                 port=config.get(section, "port", fallback="22"),
-                password=config.get(section, "password", fallback="")
+                password=config.get(section, "password", fallback=""),
             )
             hosts.append(host_entry)
         return hosts
@@ -54,15 +56,20 @@ def load_config(path):
         print(f"error: failed to parse config file. exception: {e}", file=sys.stderr)
         sys.exit(1)
 
+
 def ssh(host: Host, command: str, timeout: int, shell: Optional[str]) -> Result:
     ssh_cmd = [
         "ssh",
         "-q",
-        "-p", host.port,
-        "-o", f"ConnectTimeout={timeout}",
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "BatchMode=yes",
-        f"{host.user}@{host.host}" if host.user else f"{host.host}"
+        "-p",
+        host.port,
+        "-o",
+        f"ConnectTimeout={timeout}",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "BatchMode=yes",
+        f"{host.user}@{host.host}" if host.user else f"{host.host}",
     ]
 
     if shell:
@@ -74,22 +81,11 @@ def ssh(host: Host, command: str, timeout: int, shell: Optional[str]) -> Result:
 
     try:
         result = subprocess.run(
-            ssh_cmd,
-            input=input,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            errors="ignore"
+            ssh_cmd, input=input, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="ignore"
         )
-        return Result(
-            output=result.stdout,
-            returncode=result.returncode
-        )
+        return Result(output=result.stdout, returncode=result.returncode)
     except Exception as e:
-        return Result(
-            output=str(e),
-            returncode=None
-        )
+        return Result(output=str(e), returncode=None)
 
 
 def elide(arg: str) -> str:
@@ -100,28 +96,33 @@ def main():
     print(f"cmd: {script_path.name} {' '.join(elide(arg) for arg in sys.argv[1:])}")
     print(f"exe: {script_path}")
     print(f"cwd: {os.getcwd()}\n")
-    
+
     default_config_path = script_path.parent / "config.ini"
     parser = argparse.ArgumentParser(description="ssh probe tool to execute commands on multiple remote hosts")
     parser.add_argument("command", nargs="+", help="command to be executed on remote hosts")
-    parser.add_argument("-c", "--config", default=default_config_path, help=f"path to the config file (default: {default_config_path})")
+    parser.add_argument(
+        "-c", "--config", default=default_config_path, help=f"path to the config file (default: {default_config_path})"
+    )
     parser.add_argument("-j", "--jobs", type=int, default=16, help="number of concurrent jobs (default: 16)")
-    parser.add_argument("-t", "--timeout", type=int, default=5, help="ssh timeout in seconds (default: 5)")
+    parser.add_argument("-t", "--timeout", type=int, default=5, help="ssh connect timeout in seconds (default: 5)")
     parser.add_argument("-s", "--shell", help="remote shell to execute the command")
+    parser.add_argument("--sort", action="store_true", help="sort hosts by config name")
     args = parser.parse_args()
 
     hosts = load_config(args.config)
+    if args.sort:
+        hosts.sort(key=lambda host: host.name)
     if not hosts:
         print(f"error: no valid hosts found in config file '{args.config}'", file=sys.stderr)
-        sys.exit(1) 
-        
+        sys.exit(1)
+
     command = " ".join(args.command)
     with ThreadPoolExecutor(max_workers=args.jobs) as executor:
         res = []
         for host in hosts:
             future = executor.submit(ssh, host, command, args.timeout, args.shell)
             res.append([host, future])
-        
+
         max_prefix_len = 0
         for entry in res:
             host = entry[0]
@@ -129,23 +130,26 @@ def main():
             max_prefix_len = max(max_prefix_len, len(prefix))
             entry.append(prefix)
 
-        for host, future, prefix in res:
+        for _host, future, prefix in res:
             future_res = future.result()
             output = future_res.output.strip()
             if future_res.returncode is None:
-                assert("\n" not in output)
+                assert "\n" not in output
                 output = f"exception: {output}"
                 suffix = "---"
             else:
                 suffix = future_res.returncode
-            
+
             output_lines = output.splitlines(keepends=True)
             if output_lines:
-                output = output_lines[0] + "".join(textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8)))
+                output = output_lines[0] + "".join(
+                    textwrap.indent("".join(output_lines[1:]), " " * (max_prefix_len + 8))
+                )
             else:
                 output = "no output"
             # 输出格式：[name (host)][return code] command output
             print(f"[{prefix:<{max_prefix_len}}][{suffix:>3}] {output}")
-            
+
+
 if __name__ == "__main__":
     main()
