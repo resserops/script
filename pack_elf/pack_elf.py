@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
-import re
-import sys
 import argparse
+import os
 import platform
-import subprocess
+import re
 import shutil
+import subprocess
+import sys
 import tarfile
 import tempfile
-
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional
 
 # 基础信息
@@ -19,36 +18,36 @@ script_path = Path(sys.argv[0]).resolve()
 
 SKIP_PATTERNS = (
     # GLIBC
-    r'libc\.so(\..*)?',
-    r'libpthread\.so(\..*)?',
-    r'libdl\.so(\..*)?',
-    r'librt\.so(\..*)?',
-    r'libutil\.so(\..*)?',
-    r'libm\.so(\..*)?',
-    r'libmvec\.so(\..*)?',
-    r'libresolv\.so(\..*)?',
-    r'libanl\.so(\..*)?',
-    r'libBrokenLocale\.so(\..*)?',
-    r'libcidn\.so(\..*)?',
-    r'libcrypt\.so(\..*)?',
-    r'libnsl\.so(\..*)?',
-    r'libnss_(compat|dns|files|hesiod|nis|nisplus)\.so(\..*)?',
-    r'libthread_db\.so(\..*)?',
-
+    r"libc\.so(\..*)?",
+    r"libpthread\.so(\..*)?",
+    r"libdl\.so(\..*)?",
+    r"librt\.so(\..*)?",
+    r"libutil\.so(\..*)?",
+    r"libm\.so(\..*)?",
+    r"libmvec\.so(\..*)?",
+    r"libresolv\.so(\..*)?",
+    r"libanl\.so(\..*)?",
+    r"libBrokenLocale\.so(\..*)?",
+    r"libcidn\.so(\..*)?",
+    r"libcrypt\.so(\..*)?",
+    r"libnsl\.so(\..*)?",
+    r"libnss_(compat|dns|files|hesiod|nis|nisplus)\.so(\..*)?",
+    r"libthread_db\.so(\..*)?",
     # PT_INTERP
-    r'ld-linux.*\.so(\..*)?',    # glibc
-    r'ld-musl.*\.so(\..*)?',     # musl
-    r'ld64\.so(\..*)?',          # ppc64/s390x
-
+    r"ld-linux.*\.so(\..*)?",  # glibc
+    r"ld-musl.*\.so(\..*)?",  # musl
+    r"ld64\.so(\..*)?",  # ppc64/s390x
     # 内核虚拟对象
-    r'linux-(vdso|gate)\.so(\..*)?'
+    r"linux-(vdso|gate)\.so(\..*)?",
 )
-SKIP_RE = re.compile('|'.join(SKIP_PATTERNS))
+SKIP_RE = re.compile("|".join(SKIP_PATTERNS))
+
 
 @dataclass(frozen=True)
 class Dep:
     name: str
     path: Optional[Path]
+
 
 @dataclass(frozen=True)
 class LddResult:
@@ -58,14 +57,11 @@ class LddResult:
     def __bool__(self):
         return self.error is None
 
+
 def ldd(f: Path) -> LddResult:
     try:
         res = subprocess.run(
-            ["ldd", str(f)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            errors="ignore"
+            ["ldd", str(f)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="ignore"
         )
     except Exception as e:
         return LddResult(deps=[], error=str(e))
@@ -91,7 +87,7 @@ def ldd(f: Path) -> LddResult:
             path = path.strip()
             path = Path(path).resolve() if path and path != "not found" else None
             deps.append(Dep(name, path))
-        elif "/" in line:   # 过滤不含'/'的内核虚拟对象，例如：linux-vdso.so.1
+        elif "/" in line:  # 过滤不含'/'的内核虚拟对象，例如：linux-vdso.so.1
             name = line
             path = Path(line)
             # PT_INTERP或路径形式NEEDED，ldd不检查not found，需要exist判断存在性
@@ -108,7 +104,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="pack an ELF binary with its shared library dependencies")
     parser.add_argument("elf", help="path to the ELF executable or shared library to pack")
-    parser.add_argument("-o", "--output", default=os.getcwd(), help="output directory (default: current working directory)")
+    parser.add_argument(
+        "-o", "--output", default=os.getcwd(), help="output directory (default: current working directory)"
+    )
     args = parser.parse_args()
 
     elf_path = Path(args.elf).absolute()
@@ -168,7 +166,7 @@ def main():
     with tempfile.TemporaryDirectory() as temp_dir:
         package_dir = Path(temp_dir) / package_name
         package_dir.mkdir()
-        
+
         # 拷贝ELF
         elf_type = "lib" if is_lib else "bin"
         elf_dir = package_dir / elf_type
@@ -187,6 +185,7 @@ def main():
 
         with tarfile.open(archive_path, "w:gz") as tar:
             tar.add(package_dir, arcname=package_name)
+
 
 if __name__ == "__main__":
     main()
