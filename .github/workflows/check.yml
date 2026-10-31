@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-python:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: 0.17.2
+
+      - name: ruff format
+        run: git ls-files -z '*.py' | xargs -0 -r ruff format --check --no-cache
+
+      - name: ruff lint
+        run: git ls-files -z '*.py' | xargs -0 -r ruff check --output-format=github --no-cache
+
+  check-shell:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install shfmt
+        run: |
+          version=3.14.1
+          curl -sSfL "https://github.com/mvdan/sh/releases/download/v${version}/shfmt_v${version}_linux_amd64" -o /tmp/shfmt
+          sudo install /tmp/shfmt /usr/local/bin/shfmt
+
+      - name: shfmt
+        run: git ls-files -z '*.sh' | xargs -0 -r shfmt --diff
+
+      - name: install shellcheck
+        run: |
+          version=0.10.0
+          curl -sSfL "https://github.com/koalaman/shellcheck/releases/download/v${version}/shellcheck-v${version}.linux.x86_64.tar.xz" \
+            | tar -xJ -C /tmp
+          sudo install "/tmp/shellcheck-v${version}/shellcheck" /usr/local/bin/shellcheck
+
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck

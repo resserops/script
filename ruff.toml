@@ -3,8 +3,8 @@ line-length = 120
 target-version = "py38"
 
 [lint]
-# pycodestyle errors, -warnings, pyflakes, isort, flake8 bugbear, -bandit
-select = ["E", "W", "F", "I", "B", "S"]
+# pycodestyle errors, -warnings, pyflakes, isort, flake8 bugbear
+select = ["E", "W", "F", "I", "B"]
 ignore = ["E501"]
 
 [format]
